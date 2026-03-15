@@ -16,11 +16,33 @@ db.exec(`
   )
 `);
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS inspections (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    protocol TEXT UNIQUE NOT NULL,
+    inspector_email TEXT NOT NULL,
+    data TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
 
   app.use(express.json({ limit: '50mb' }));
+
+  // Inspections Endpoints
+  app.post("/api/inspections", (req, res) => {
+    const { protocol, inspector_email, data } = req.body;
+    try {
+      const stmt = db.prepare("INSERT INTO inspections (protocol, inspector_email, data) VALUES (?, ?, ?)");
+      stmt.run(protocol, inspector_email, JSON.stringify(data));
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ error: "Erro ao salvar vistoria" });
+    }
+  });
 
   // Auth Endpoints
   app.post("/api/register", (req, res) => {

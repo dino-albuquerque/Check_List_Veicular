@@ -17,7 +17,8 @@ import {
   Calendar,
   Hash,
   MessageSquare,
-  Mail
+  Mail,
+  PlusCircle
 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { InspectionData, ChecklistStatus, User, InspectionType, ChecklistItem } from '../types';
@@ -146,7 +147,51 @@ export function InspectionWizard({ user, onLogout }: InspectionWizardProps) {
     }
   };
 
-  const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
+  const nextStep = async () => {
+    if (currentStep === STEPS.length - 2) {
+      // Finalizing
+      await saveInspection();
+    }
+    setCurrentStep(prev => Math.min(prev + 1, STEPS.length - 1));
+  };
+
+  const saveInspection = async () => {
+    try {
+      const response = await fetch('/api/inspections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          protocol: data.protocol,
+          inspector_email: user.email,
+          data: data
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to save');
+    } catch (err) {
+      console.error("Error saving inspection:", err);
+    }
+  };
+
+  const resetWizard = () => {
+    setCurrentStep(0);
+    setData({
+      protocol: generateProtocol(),
+      inspector: user.name,
+      type: 'final',
+      vehicle: { plate: '', brand: '', model: '', year: '', color: '', km: '' },
+      checklist: {
+        exterior: CHECKLIST_STRUCTURE.exterior.map(i => ({ ...i, status: 'ok' as ChecklistStatus })),
+        interior: CHECKLIST_STRUCTURE.interior.map(i => ({ ...i, status: 'ok' as ChecklistStatus })),
+        mechanics: CHECKLIST_STRUCTURE.mechanics.map(i => ({ ...i, status: 'ok' as ChecklistStatus })),
+        docs: CHECKLIST_STRUCTURE.docs.map(i => ({ ...i, status: 'ok' as ChecklistStatus })),
+      },
+      photos: {},
+      comments: '',
+      signature: '',
+      date: new Date().toLocaleDateString('pt-BR'),
+    });
+  };
+
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0));
 
   const updateChecklist = (category: keyof typeof data.checklist, id: string, status: ChecklistStatus) => {
@@ -500,17 +545,34 @@ export function InspectionWizard({ user, onLogout }: InspectionWizardProps) {
               <button 
                 onClick={downloadPdf}
                 disabled={isGeneratingPdf}
-                className="flex-1 py-4 bg-slate-800 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-900 transition-all shadow-lg shadow-slate-800/20 disabled:opacity-50"
+                className="flex-1 py-4 bg-slate-100 text-slate-700 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-all disabled:opacity-50"
               >
                 {isGeneratingPdf ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                 Baixar PDF
               </button>
               <button 
                 onClick={() => setShowEmailModal(true)}
-                className="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
+                className="flex-1 py-4 bg-slate-100 text-slate-700 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-slate-200 transition-all"
               >
                 <Send className="w-5 h-5" />
                 Enviar E-mail
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <button 
+                onClick={resetWizard}
+                className="py-4 bg-blue-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20"
+              >
+                <PlusCircle className="w-5 h-5" />
+                Nova Vistoria
+              </button>
+              <button 
+                onClick={resetWizard}
+                className="py-4 bg-emerald-600 text-white rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-600/20"
+              >
+                <CheckCircle2 className="w-5 h-5" />
+                Salvar e Fechar
               </button>
             </div>
           </div>
