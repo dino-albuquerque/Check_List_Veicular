@@ -1,0 +1,7 @@
+{
+  "name": "Auto Check",
+  "description": "Sistema profissional de inspeção veicular desenvolvido por BJ Hub.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
